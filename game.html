@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Та Битгий Уурлаарай</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:linear-gradient(135deg,#1a0533,#2d1b69,#1a3a5c); min-height:100vh; }
+input { color:#fff !important; }
+input::placeholder { color:rgba(255,255,255,0.4); }
+@keyframes pop { 0%{transform:scale(0.8);opacity:0} 100%{transform:scale(1);opacity:1} }
+@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(167,139,250,0.6)} 50%{box-shadow:0 0 0 12px rgba(167,139,250,0)} }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+const ALL_QUESTIONS = [
+  { q:"Монгол цаг тоолол ямар үндсэн тоололд тулгуурладаг вэ?", correct:"Нар-сар хосолсон тоолол", options:["Нарны тоолол","Сарны тоолол","Нар-сар хосолсон тоолол","Одны тоолол"] },
+  { q:"Монгол цаг тоололд нэг жил хэдэн сараас бүрддэг вэ?", correct:"12", options:["10","12","13","14"] },
+  { q:"Монгол билгийн тооллын сар ихэвчлэн хэдэн хоногтой байдаг вэ?", correct:"29–30", options:["28–29","29–30","30–31","31–32"] },
+  { q:"Монгол цаг тоололд жилүүдийг юугаар нэрлэдэг вэ?", correct:"Амьтан", options:["Сар","Амьтан","Өнгө","Од"] },
+  { q:"Арван хоёр жилийн тооллын эхний амьтан аль нь вэ?", correct:"Хулгана", options:["Үхэр","Хулгана","Бар","Туулай"] },
+  { q:"Арван хоёр жилийн тооллын хоёр дахь амьтан аль нь вэ?", correct:"Үхэр", options:["Үхэр","Морь","Могой","Туулай"] },
+  { q:"Арван хоёр жилийн тооллын гурав дахь амьтан аль нь вэ?", correct:"Бар", options:["Бар","Нохой","Морь","Гахай"] },
+  { q:"Арван хоёр жилийн тооллын дөрөв дэх амьтан аль нь вэ?", correct:"Туулай", options:["Луу","Туулай","Могой","Хонь"] },
+  { q:"Арван хоёр жилийн тооллын тав дахь амьтан аль нь вэ?", correct:"Луу", options:["Луу","Морь","Могой","Бич"] },
+  { q:"Арван хоёр жилийн тооллын зургаа дахь амьтан аль нь вэ?", correct:"Могой", options:["Могой","Хонь","Бич","Тахиа"] },
+  { q:"Арван хоёр жилийн долоо дахь амьтан аль нь вэ?", correct:"Морь", options:["Морь","Хонь","Нохой","Гахай"] },
+  { q:"Арван хоёр жилийн найм дахь амьтан аль нь вэ?", correct:"Хонь", options:["Хонь","Бич","Тахиа","Нохой"] },
+  { q:"Арван хоёр жилийн ес дэх амьтан аль нь вэ?", correct:"Бич", options:["Тахиа","Бич","Нохой","Морь"] },
+  { q:"Арван хоёр жилийн арав дахь амьтан аль нь вэ?", correct:"Тахиа", options:["Нохой","Тахиа","Гахай","Могой"] },
+  { q:"Арван хоёр жилийн арван нэгдүгээр амьтан аль нь вэ?", correct:"Нохой", options:["Нохой","Гахай","Хонь","Бар"] },
+  { q:"Арван хоёр жилийн арван хоёр дахь амьтан аль нь вэ?", correct:"Гахай", options:["Гахай","Нохой","Хонь","Морь"] },
+  { q:"Монгол цаг тоололд таван махбодь хэд байдаг вэ?", correct:"5", options:["3","4","5","6"] },
+  { q:"Дараахын аль нь таван махбодьд хамаарах вэ?", correct:"Мод", options:["Мод","Чулуу","Агаар","Нар"] },
+  { q:"Дараахын аль нь таван махбодьд хамаарах вэ?", correct:"Гал", options:["Гал","Од","Цас","Манан"] },
+  { q:"Дараахын аль нь таван махбодьд хамаарах вэ?", correct:"Ус", options:["Ус","Салхи","Манан","Нар"] },
+  { q:"Дараахын аль нь таван махбодьд хамаарах вэ?", correct:"Төмөр", options:["Төмөр","Агаар","Цас","Од"] },
+  { q:"Дараахын аль нь таван махбодьд хамаарах вэ?", correct:"Шороо", options:["Шороо","Салхи","Нар","Манан"] },
+  { q:"Монгол цаг тооллын жаран жилийн мөчлөг юунаас бүрддэг вэ?", correct:"10 ба 12-ын хослол", options:["10 ба 12-ын хослол","5 ба 12-ын хослол","10 ба 5-ын хослол","12 ба 6-ын хослол"] },
+  { q:"Жаран жилийн мөчлөг хэдэн жил үргэлжилдэг вэ?", correct:"60", options:["40","50","60","70"] },
+  { q:"Монгол уламжлалт цагийн хуваарьт нэг хоногийг хэдэн хэсэгт хуваадаг вэ?", correct:"12", options:["10","12","24","30"] },
+  { q:"Хулгана цаг аль үед тохиодог вэ?", correct:"23:00–01:00", options:["23:00–01:00","01:00–03:00","03:00–05:00","05:00–07:00"] },
+  { q:"Үхэр цаг аль үед тохиодог вэ?", correct:"01:00–03:00", options:["23:00–01:00","01:00–03:00","03:00–05:00","05:00–07:00"] },
+  { q:"Бар цаг аль үед тохиодог вэ?", correct:"03:00–05:00", options:["03:00–05:00","05:00–07:00","01:00–03:00","07:00–09:00"] },
+  { q:"Туулай цаг аль үед тохиодог вэ?", correct:"05:00–07:00", options:["05:00–07:00","07:00–09:00","09:00–11:00","11:00–13:00"] },
+  { q:"Луу цаг аль үед тохиодог вэ?", correct:"07:00–09:00", options:["07:00–09:00","09:00–11:00","11:00–13:00","13:00–15:00"] },
+  { q:"Могой цаг аль үед тохиодог вэ?", correct:"09:00–11:00", options:["09:00–11:00","11:00–13:00","13:00–15:00","15:00–17:00"] },
+  { q:"Морь цаг аль үед тохиодог вэ?", correct:"11:00–13:00", options:["11:00–13:00","13:00–15:00","15:00–17:00","17:00–19:00"] },
+  { q:"Хонь цаг аль үед тохиодог вэ?", correct:"13:00–15:00", options:["13:00–15:00","15:00–17:00","17:00–19:00","19:00–21:00"] },
+  { q:"Бич цаг аль үед тохиодог вэ?", correct:"15:00–17:00", options:["15:00–17:00","17:00–19:00","19:00–21:00","21:00–23:00"] },
+  { q:"Тахиа цаг аль үед тохиодог вэ?", correct:"17:00–19:00", options:["17:00–19:00","19:00–21:00","21:00–23:00","23:00–01:00"] },
+  { q:"Нохой цаг аль үед тохиодог вэ?", correct:"19:00–21:00", options:["19:00–21:00","21:00–23:00","23:00–01:00","01:00–03:00"] },
+  { q:"Гахай цаг аль үед тохиодог вэ?", correct:"21:00–23:00", options:["21:00–23:00","23:00–01:00","01:00–03:00","03:00–05:00"] },
+  { q:"Монгол уламжлалт шинэ жилийг юу гэж нэрлэдэг вэ?", correct:"Цагаан сар", options:["Наадам","Цагаан сар","Тулгар төр","Алтан намар"] },
+  { q:"Цагаан сар ямар тооллоор тодорхойлогддог вэ?", correct:"Билгийн тоолол", options:["Аргын тоолол","Билгийн тоолол","Нарны тоолол","Одны тоолол"] },
+  { q:"Битүүн өдөр гэж юу вэ?", correct:"Сарын сүүлийн өдөр", options:["Шинэ сарын эхний өдөр","Сарын сүүлийн өдөр","Жилийн эхний өдөр","Улирлын эхний өдөр"] },
+  { q:"Шинийн нэгэн ямар өдөр вэ?", correct:"Шинэ жилийн эхний өдөр", options:["Жилийн сүүлийн өдөр","Шинэ жилийн эхний өдөр","Намрын эхний өдөр","Зуны эхний өдөр"] },
+  { q:"Монгол цаг тоололд хаврын улирал хэдэн сараас бүрддэг вэ?", correct:"3", options:["2","3","4","5"] },
+  { q:"Монгол цаг тоололд зуны улирал хэдэн сараас бүрддэг вэ?", correct:"3", options:["2","3","4","5"] },
+  { q:"Монгол цаг тоололд намрын улирал хэдэн сараас бүрддэг вэ?", correct:"3", options:["2","3","4","5"] },
+  { q:"Монгол цаг тоололд өвлийн улирал хэдэн сараас бүрддэг вэ?", correct:"3", options:["2","3","4","5"] },
+  { q:"Монгол цаг тоолол мал аж ахуйд ямар ач холбогдолтой вэ?", correct:"Нүүдэл, малын ажлыг зохицуулах", options:["Хөгжим тоглох","Нүүдэл, малын ажлыг зохицуулах","Барилга барих","Худалдаа хийх"] },
+  { q:"Монгол цаг тоололд улирлыг тодорхойлоход юу чухал вэ?", correct:"Дээрх бүгд", options:["Сарны хөдөлгөөн","Нарны хөдөлгөөн","Уур амьсгал","Дээрх бүгд"] },
+  { q:"Монгол цаг тооллын жаран жилийн тооллыг өөрөөр юу гэж нэрлэдэг вэ?", correct:"Жарны тоолол", options:["Их тоолол","Жарны тоолол","Нарны тоолол","Одны тоолол"] },
+  { q:"Монгол цаг тоолол аль орны соёлтой ойр холбоотой хөгжсөн бэ?", correct:"Төвд ба Хятад", options:["Энэтхэг","Хятад","Төвд","Төвд ба Хятад"] },
+  { q:"Монгол билгийн тоолол юунд үндэслэдэг вэ?", correct:"Сар", options:["Нар","Сар","Од","Салхи"] },
+  { q:"Монгол цаг тоололд сар хэзээ эхэлдэг вэ?", correct:"Шинэ сараар", options:["Бүтэн сараар","Шинэ сараар","Нар жаргах үед","Нар мандах үед"] },
+  { q:"Монгол цаг тоололд зарим жилд ордог илүү сарыг юу гэж нэрлэдэг вэ?", correct:"Илүү сар", options:["Илүү сар","Нэмэлт сар","Давхар сар","Илүүдэл сар"] },
+  { q:"Монгол цаг тоололд жилүүдийг юу хослуулж нэрлэдэг вэ?", correct:"Амьтан ба махбодь", options:["Амьтан ба махбодь","Амьтан ба өнгө","Сар ба улирал","Нар ба од"] },
+  { q:"Таван махбодийн мөчлөг хэдэн жилд давтагддаг вэ?", correct:"10", options:["5","10","12","60"] },
+  { q:"Монгол уламжлалт цагийн нэг хэсэг хэдэн цагтай тэнцэх вэ?", correct:"2 цаг", options:["1 цаг","2 цаг","3 цаг","4 цаг"] },
+  { q:"Монгол цаг тооллын судрыг хэн ихээр хөгжүүлсэн бэ?", correct:"Лам нар", options:["Лам нар","Малчид","Цэргүүд","Хаад"] },
+  { q:"Монгол цаг тоололд улирлын өөрчлөлт юутай холбоотой вэ?", correct:"Дээрх бүгд", options:["Нар","Сар","Байгаль","Дээрх бүгд"] },
+  { q:"Монгол цаг тооллыг өнөө үед хаана ашигладаг вэ?", correct:"Дээрх бүгд", options:["Баяр ёслол","Шашны зан үйл","Зурхай","Дээрх бүгд"] },
+  { q:"Монголчууд жил орчмыг ажиглахдаа юуг их анхаардаг байсан бэ?", correct:"Дээрх бүгд", options:["Малын зан авир","Байгалийн өөрчлөлт","Сарны хэлбэр","Дээрх бүгд"] },
+  { q:"Монгол цаг тоолол нүүдлийн амьдралд яагаад хэрэгтэй байсан бэ?", correct:"Дээрх бүгд", options:["Цаг агаар мэдэх","Нүүдлийн хугацааг төлөвлөх","Мал аж ахуй зохицуулах","Дээрх бүгд"] },
+  { q:"Монгол цаг тоололд 'жаран' гэдэг нь юуг илэрхийлдэг вэ?", correct:"60 жил", options:["30 жил","50 жил","60 жил","70 жил"] },
+  { q:"Монгол цаг тоололд жилүүдийн нэршил юунаас үүсдэг вэ?", correct:"Амьтан ба махбодийн хослол", options:["Амьтан","Махбодь","Амьтан ба махбодийн хослол","Сар"] },
+  { q:"Монгол цаг тоололд билгийн сар ихэвчлэн хэдэн хоногтой вэ?", correct:"29 эсвэл 30", options:["28","29","29 эсвэл 30","31"] },
+  { q:"Монгол уламжлалт цагийн хуваарьт нэг хоног хэдэн цагтай тэнцэх вэ?", correct:"24", options:["12","24","36","48"] },
+  { q:"Монгол цаг тоололд хаврын эхэн сар аль нь вэ?", correct:"Гуравдугаар сар", options:["Нэгдүгээр сар","Хоёрдугаар сар","Гуравдугаар сар","Дөрөвдүгээр сар"] },
+  { q:"Монголчууд цаг тооллыг юуг ажиглан тогтоож байсан бэ?", correct:"Дээрх бүгд", options:["Сар","Нар","Байгаль","Дээрх бүгд"] },
+  { q:"Монгол цаг тоололд улирлын өөрчлөлт юунд нөлөөлдөг вэ?", correct:"Дээрх бүгд", options:["Мал аж ахуй","Нүүдэл","Амьдралын хэв маяг","Дээрх бүгд"] },
+  { q:"Монгол цаг тоололд Цагаан сар ямар утгатай вэ?", correct:"Шинэ жилийн баяр", options:["Ургацын баяр","Шинэ жилийн баяр","Зуны баяр","Намрын баяр"] },
+  { q:"Монгол цаг тооллын мэдлэгийг уламжлал ёсоор хэн хадгалж ирсэн бэ?", correct:"Дээрх бүгд", options:["Лам нар","Эрдэмтэд","Ахмад хүмүүс","Дээрх бүгд"] },
+  { q:"Монгол цаг тооллын судалгаа аль шинжлэх ухаантай нягт холбоотой вэ?", correct:"Дээрх бүгд", options:["Одон орон","Математик","Соёл судлал","Дээрх бүгд"] },
+];
+
+// Assign questions to squares 1-70, cycling through all questions
+const SQUARE_QUESTIONS = {};
+for (let i = 1; i <= 70; i++) {
+  SQUARE_QUESTIONS[i] = ALL_QUESTIONS[(i - 1) % ALL_QUESTIONS.length];
+}
+
+const SPECIAL_SQUARES = {
+  10: { type:"forward",  amount:3, icon:"⭐", label:"Азтай! 3 нүүдэл урагш!" },
+  20: { type:"forward",  amount:2, icon:"🌟", label:"Сайн! 2 нүүдэл урагш!" },
+  32: { type:"backward", amount:4, icon:"🐢", label:"4 нүүдэл ухарна!" },
+  45: { type:"forward",  amount:3, icon:"🦅", label:"Хурдан! 3 нүүдэл урагш!" },
+  55: { type:"backward", amount:5, icon:"🌀", label:"5 нүүдэл ухарна!" },
+  62: { type:"forward",  amount:4, icon:"🎯", label:"Онов! 4 нүүдэл урагш!" },
+};
+
+const COLORS = [{ bg:"#E74C3C" },{ bg:"#3498DB" },{ bg:"#2ECC71" },{ bg:"#F39C12" }];
+
+function getCellBg(n) {
+  if (SPECIAL_SQUARES[n]) return SPECIAL_SQUARES[n].type === "forward" ? "#27AE60" : "#C0392B";
+  if (n % 5 === 0) return "#F0C040";
+  if (n % 3 === 0) return "#7EC8C8";
+  if (n % 2 === 0) return "#A8C8F0";
+  return "#F4A8B8";
+}
+
+function generateBoard() {
+  const rows = 8, cols = 10;
+  let num = 1, pos = [];
+  for (let r = rows - 1; r >= 0; r--) {
+    if ((rows - 1 - r) % 2 === 0) {
+      for (let c = 0; c < cols; c++) { if (num <= 70) pos.push({ r, c, n: num++ }); }
+    } else {
+      for (let c = cols - 1; c >= 0; c--) { if (num <= 70) pos.push({ r, c, n: num++ }); }
+    }
+  }
+  return pos;
+}
+
+const boardCells = generateBoard();
+const { useState } = React;
+function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+
+function App() {
+  const [players, setPlayers]         = useState([{ name:"Тоглогч 1", pos:0, color:COLORS[0] },{ name:"Тоглогч 2", pos:0, color:COLORS[1] }]);
+  const [playerCount, setPlayerCount] = useState(2);
+  const [currentPlayer, setCP]        = useState(0);
+  const [diceValue, setDice]          = useState(null);
+  const [rolling, setRolling]         = useState(false);
+  const [phase, setPhase]             = useState("setup");
+  const [question, setQuestion]       = useState(null);
+  const [selected, setSelected]       = useState(null);
+  const [result, setResult]           = useState(null);
+  const [playerNames, setNames]       = useState(["Тоглогч 1","Тоглогч 2","Тоглогч 3","Тоглогч 4"]);
+  const [winner, setWinner]           = useState(null);
+  const [special, setSpecial]         = useState(null);
+  const [landed, setLanded]           = useState(null);
+
+  const diceEmoji = ["","⚀","⚁","⚂","⚃","⚄","⚅"];
+
+  const nextTurn = () => {
+    setPhase("playing"); setQuestion(null); setResult(null);
+    setSelected(null); setLanded(null);
+    setCP(p => (p + 1) % playerCount);
+  };
+
+  const showQuestion = (sq) => {
+    const raw = SQUARE_QUESTIONS[sq] || ALL_QUESTIONS[0];
+    setQuestion({ ...raw, shuffledOptions: shuffle(raw.options) });
+    setSelected(null); setResult(null); setPhase("question");
+  };
+
+  const rollDice = () => {
+    if (rolling || phase !== "playing") return;
+    setRolling(true);
+    let count = 0;
+    const iv = setInterval(() => {
+      setDice(Math.ceil(Math.random() * 6));
+      if (++count >= 10) {
+        clearInterval(iv);
+        const final = Math.ceil(Math.random() * 6);
+        setDice(final); setRolling(false);
+        setPlayers(prev => {
+          const upd = [...prev];
+          const p = { ...upd[currentPlayer] };
+          p.pos = Math.min(p.pos + final, 70);
+          upd[currentPlayer] = p;
+          if (p.pos >= 70) { setWinner(currentPlayer); setPhase("winner"); return upd; }
+          setLanded(p.pos);
+          if (SPECIAL_SQUARES[p.pos]) { setSpecial({ ...SPECIAL_SQUARES[p.pos] }); setPhase("special"); }
+          else setPhase("moved");
+          return upd;
+        });
+      }
+    }, 80);
+  };
+
+  const handleSpecial = () => {
+    const sp = special;
+    let np;
+    setPlayers(prev => {
+      const upd = [...prev];
+      const p = { ...upd[currentPlayer] };
+      p.pos = sp.type === "forward" ? Math.min(p.pos + sp.amount, 70) : Math.max(p.pos - sp.amount, 1);
+      np = p.pos; upd[currentPlayer] = p;
+      if (p.pos >= 70) { setWinner(currentPlayer); setPhase("winner"); return upd; }
+      return upd;
+    });
+    setSpecial(null);
+    setTimeout(() => { setLanded(np); setPhase("moved"); }, 100);
+  };
+
+  const pick = (opt) => {
+    if (result) return;
+    setSelected(opt);
+    const ok = opt === question.correct;
+    setResult(ok ? "correct" : "wrong");
+    if (ok) { setTimeout(nextTurn, 2000); }
+    else {
+      setPlayers(prev => {
+        const upd = [...prev]; const p = { ...upd[currentPlayer] };
+        p.pos = Math.max(p.pos - 1, 1); upd[currentPlayer] = p; return upd;
+      });
+      setTimeout(nextTurn, 2500);
+    }
+  };
+
+  const startGame = () => {
+    const ps = Array.from({ length: playerCount }, (_, i) => ({ name: playerNames[i] || `Тоглогч ${i+1}`, pos: 0, color: COLORS[i] }));
+    setPlayers(ps); setCP(0); setPhase("playing");
+    setWinner(null); setDice(null); setLanded(null);
+  };
+
+  const optStyle = (opt) => {
+    const base = { padding:"10px 14px", borderRadius:"10px", cursor: result ? "default" : "pointer", fontWeight:600, fontSize:"0.9rem", marginBottom:"8px", width:"100%", border:"2px solid", textAlign:"left", transition:"all 0.2s" };
+    if (!result) return { ...base, background:"rgba(255,255,255,0.1)", borderColor:"rgba(255,255,255,0.25)", color:"#fff" };
+    if (opt === question.correct) return { ...base, background:"rgba(46,204,113,0.25)", borderColor:"#2ECC71", color:"#2ECC71" };
+    if (opt === selected) return { ...base, background:"rgba(231,76,60,0.25)", borderColor:"#E74C3C", color:"#FF6B6B" };
+    return { ...base, background:"rgba(255,255,255,0.04)", borderColor:"rgba(255,255,255,0.08)", color:"#555" };
+  };
+
+  const inGame = ["playing","moved","special","question"].includes(phase);
+
+  // Compact board cell size
+  const CELL = { minHeight:"32px", fontSize:"0.5rem" };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#1a0533,#2d1b69,#1a3a5c)", fontFamily:"'Segoe UI',sans-serif", padding:"12px", display:"flex", flexDirection:"column", alignItems:"center" }}>
+
+      <div style={{ fontSize:"1.3rem", fontWeight:900, color:"#FFD700", textShadow:"0 0 16px #FFD70099", marginBottom:"2px", textAlign:"center", letterSpacing:"1px" }}>🎲 ТА БИТГИЙ УУРЛААРАЙ 🎲</div>
+      <div style={{ color:"#A78BFA", fontSize:"0.75rem", marginBottom:"12px", textAlign:"center" }}>Монгол цаг тооллын асуултуудтай хөлөгт тоглоом</div>
+
+      {/* SETUP */}
+      {phase === "setup" && (
+        <div style={{ background:"rgba(255,255,255,0.08)", borderRadius:"18px", padding:"22px", maxWidth:"380px", width:"100%", border:"1px solid rgba(255,215,0,0.3)", animation:"pop 0.3s ease" }}>
+          <div style={{ color:"#FFD700", fontWeight:700, marginBottom:"14px", textAlign:"center" }}>👥 Тоглогчдын тоо</div>
+          <div style={{ display:"flex", gap:"10px", justifyContent:"center", marginBottom:"18px" }}>
+            {[2,3,4].map(n => (
+              <button key={n} onClick={() => setPlayerCount(n)} style={{ padding:"10px 22px", borderRadius:"10px", border:`2px solid ${playerCount===n?"#FFD700":"transparent"}`, background:playerCount===n?"#FFD700":"rgba(255,255,255,0.1)", color:playerCount===n?"#1a0533":"#fff", fontWeight:700, cursor:"pointer" }}>{n}</button>
+            ))}
+          </div>
+          {Array.from({ length: playerCount }, (_, i) => (
+            <div key={i} style={{ marginBottom:"9px", display:"flex", alignItems:"center", gap:"10px" }}>
+              <div style={{ width:16, height:16, borderRadius:"50%", background:COLORS[i].bg, flexShrink:0, boxShadow:`0 0 6px ${COLORS[i].bg}` }}/>
+              <input value={playerNames[i]} onChange={e => { const n=[...playerNames]; n[i]=e.target.value; setNames(n); }} placeholder={`Тоглогч ${i+1}`} style={{ flex:1, padding:"9px 12px", borderRadius:"9px", border:"1px solid rgba(255,255,255,0.2)", background:"rgba(255,255,255,0.1)", fontSize:"0.95rem", outline:"none" }}/>
+            </div>
+          ))}
+          <button onClick={startGame} style={{ width:"100%", padding:"13px", borderRadius:"12px", background:"linear-gradient(135deg,#FFD700,#FF8C00)", border:"none", color:"#1a0533", fontSize:"1rem", fontWeight:900, cursor:"pointer", marginTop:"12px", boxShadow:"0 4px 18px rgba(255,215,0,0.35)" }}>🎮 ТОГЛООМ ЭХЛЭХ</button>
+        </div>
+      )}
+
+      {/* GAME */}
+      {inGame && (
+        <div style={{ width:"100%", maxWidth:"680px" }}>
+
+          {/* Players */}
+          <div style={{ display:"flex", gap:"6px", marginBottom:"8px", flexWrap:"wrap", justifyContent:"center" }}>
+            {players.slice(0, playerCount).map((p, i) => (
+              <div key={i} style={{ padding:"6px 12px", borderRadius:"10px", background:i===currentPlayer?p.color.bg:"rgba(255,255,255,0.07)", border:`2px solid ${i===currentPlayer?"#FFD700":"transparent"}`, color:"#fff", fontWeight:i===currentPlayer?700:400, display:"flex", alignItems:"center", gap:"6px", fontSize:"0.85rem", transition:"all 0.3s" }}>
+                <span>●</span><span>{p.name}</span>
+                <span style={{ background:"rgba(0,0,0,0.3)", borderRadius:"5px", padding:"1px 6px", fontSize:"0.72rem" }}>{p.pos}/70</span>
+              </div>
+            ))}
+          </div>
+
+          {/* BOARD — narrow cells */}
+          <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:"14px", padding:"8px", border:"1px solid rgba(255,215,0,0.15)", marginBottom:"10px", overflowX:"auto" }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(10,1fr)", gap:"2px", minWidth:"320px" }}>
+              {boardCells.map(({ r, c, n }) => {
+                const here = players.slice(0, playerCount).filter(p => p.pos === n);
+                const sp   = SPECIAL_SQUARES[n];
+                const isL  = n === landed;
+                return (
+                  <div key={n} style={{ gridRow:r+1, gridColumn:c+1, background:getCellBg(n), borderRadius:"5px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"1px", ...CELL, border:isL?"2px solid #FFD700":"1px solid rgba(0,0,0,0.08)", boxShadow:isL?"0 0 10px #FFD700":here.length>0?"0 0 6px rgba(255,215,0,0.6)":"none", transition:"all 0.3s" }}>
+                    <span style={{ fontSize:"0.45rem", color:"#333", fontWeight:700, lineHeight:1 }}>{n}</span>
+                    {sp && <span style={{ fontSize:"0.65rem", lineHeight:1 }}>{sp.icon}</span>}
+                    <div style={{ display:"flex", gap:"1px", flexWrap:"wrap", justifyContent:"center" }}>
+                      {here.map((p, pi) => (
+                        <div key={pi} style={{ width:8, height:8, borderRadius:"50%", background:p.color.bg, border:"1px solid white", animation:isL?"bounce 0.7s ease infinite":"" }}/>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ROLL */}
+          {phase === "playing" && (
+            <div style={{ background:"rgba(255,255,255,0.08)", borderRadius:"14px", padding:"18px", textAlign:"center", border:"1px solid rgba(255,215,0,0.2)" }}>
+              <div style={{ color:"#FFD700", fontWeight:700, marginBottom:"8px" }}>{players[currentPlayer]?.name}-ийн ээлж</div>
+              <div style={{ fontSize:"3rem", marginBottom:"10px" }}>{diceValue ? diceEmoji[diceValue] : "🎲"}</div>
+              <button onClick={rollDice} disabled={rolling} style={{ padding:"12px 36px", borderRadius:"12px", background:rolling?"rgba(255,255,255,0.1)":"linear-gradient(135deg,#FFD700,#FF8C00)", border:"none", color:rolling?"#888":"#1a0533", fontSize:"1rem", fontWeight:900, cursor:rolling?"not-allowed":"pointer" }}>
+                {rolling ? "⏳ Хаяж байна..." : "🎲 ШОО ХАЯХ"}
+              </button>
+            </div>
+          )}
+
+          {/* MOVED */}
+          {phase === "moved" && (
+            <div style={{ background:"rgba(255,255,255,0.08)", borderRadius:"14px", padding:"20px", textAlign:"center", border:"2px solid rgba(255,215,0,0.35)", animation:"pop 0.3s ease" }}>
+              <div style={{ fontSize:"2.5rem", marginBottom:"4px" }}>{diceEmoji[diceValue]}</div>
+              <div style={{ color:"#FFD700", fontSize:"1.3rem", fontWeight:900, marginBottom:"4px" }}>Шоо: {diceValue}</div>
+              <div style={{ color:"#fff", fontSize:"0.95rem", marginBottom:"4px" }}>
+                <span style={{ color:players[currentPlayer]?.color.bg, fontWeight:700 }}>{players[currentPlayer]?.name}</span>
+                {" → "}
+                <span style={{ color:"#FFD700", fontWeight:700 }}>{landed}-р нүд</span>
+              </div>
+              <div style={{ color:"#A78BFA", fontSize:"0.8rem", marginBottom:"16px" }}>Асуулт бэлэн байна!</div>
+              <button onClick={() => showQuestion(landed)} style={{ padding:"13px 34px", borderRadius:"12px", background:"linear-gradient(135deg,#A78BFA,#7C3AED)", border:"none", color:"#fff", fontSize:"1rem", fontWeight:900, cursor:"pointer", animation:"pulse 1.5s ease infinite" }}>
+                📋 Асуулт харах
+              </button>
+            </div>
+          )}
+
+          {/* SPECIAL */}
+          {phase === "special" && special && (
+            <div style={{ background:special.type==="forward"?"rgba(46,204,113,0.15)":"rgba(231,76,60,0.15)", borderRadius:"14px", padding:"20px", textAlign:"center", border:`2px solid ${special.type==="forward"?"#2ECC71":"#E74C3C"}`, animation:"pop 0.3s ease" }}>
+              <div style={{ fontSize:"2.5rem", marginBottom:"6px" }}>{special.icon}</div>
+              <div style={{ color:"#FFD700", fontSize:"1.1rem", fontWeight:700, marginBottom:"6px" }}>{special.label}</div>
+              <div style={{ color:"#aaa", fontSize:"0.8rem", marginBottom:"14px" }}>Дараа нь асуулт хариулна</div>
+              <button onClick={handleSpecial} style={{ padding:"11px 28px", borderRadius:"11px", background:"linear-gradient(135deg,#FFD700,#FF8C00)", border:"none", color:"#1a0533", fontWeight:700, cursor:"pointer" }}>Үргэлжлүүлэх →</button>
+            </div>
+          )}
+
+          {/* QUESTION */}
+          {phase === "question" && question && (
+            <div style={{ background:"rgba(167,139,250,0.12)", borderRadius:"14px", padding:"18px", border:"1px solid rgba(167,139,250,0.4)", animation:"pop 0.3s ease" }}>
+              <div style={{ color:"#A78BFA", fontSize:"0.75rem", marginBottom:"8px", textAlign:"center" }}>
+                📅 {players[currentPlayer]?.name} — <span style={{ color:"#FFD700" }}>{landed}-р нүдний асуулт</span>
+              </div>
+              <div style={{ color:"#fff", fontSize:"1rem", fontWeight:600, marginBottom:"14px", textAlign:"center", lineHeight:1.55 }}>{question.q}</div>
+              {question.shuffledOptions.map((opt, i) => (
+                <button key={i} onClick={() => pick(opt)} style={optStyle(opt)}>
+                  <span style={{ marginRight:"8px", opacity:0.5, fontWeight:700 }}>{["A","B","C","D"][i]})</span>
+                  {opt}
+                  {result && opt === question.correct && " ✅"}
+                  {result && opt === selected && opt !== question.correct && " ❌"}
+                </button>
+              ))}
+              {result === "correct" && <div style={{ textAlign:"center", marginTop:"8px", color:"#2ECC71", fontWeight:700, animation:"pop 0.3s ease" }}>🎉 Зөв хариулт!</div>}
+              {result === "wrong"   && <div style={{ textAlign:"center", marginTop:"8px", color:"#FF6B6B", fontWeight:700, animation:"pop 0.3s ease" }}>❌ Буруу! 1 нүүдэл ухарлаа. Зөв: <span style={{ color:"#FFD700" }}>{question.correct}</span></div>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* WINNER */}
+      {phase === "winner" && winner !== null && (
+        <div style={{ textAlign:"center", padding:"36px", background:"rgba(255,215,0,0.1)", borderRadius:"22px", border:"2px solid #FFD700", maxWidth:"360px", width:"100%", animation:"pop 0.4s ease" }}>
+          <div style={{ fontSize:"4rem", marginBottom:"10px" }}>🏆</div>
+          <div style={{ color:"#FFD700", fontSize:"1.8rem", fontWeight:900, marginBottom:"6px" }}>{players[winner]?.name}</div>
+          <div style={{ color:"#fff", fontSize:"1rem", marginBottom:"20px" }}>ТОГЛООМЫГ ДУУСГАЛАА!</div>
+          <button onClick={() => setPhase("setup")} style={{ padding:"13px 36px", borderRadius:"12px", background:"linear-gradient(135deg,#FFD700,#FF8C00)", border:"none", color:"#1a0533", fontWeight:900, fontSize:"1rem", cursor:"pointer" }}>🔄 Дахин тоглох</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
