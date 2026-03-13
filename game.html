@@ -9,17 +9,180 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <style>
 * { box-sizing:border-box; margin:0; padding:0; }
-body { background:linear-gradient(135deg,#1a0533,#2d1b69,#1a3a5c); min-height:100vh; }
+body {
+  min-height:100vh;
+  background-color: #8B0000;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(180,0,0,0.35) 0px, rgba(180,0,0,0.35) 2px, transparent 2px, transparent 60px),
+    repeating-linear-gradient(-45deg, rgba(180,0,0,0.35) 0px, rgba(180,0,0,0.35) 2px, transparent 2px, transparent 60px);
+}
 input { color:#fff !important; }
 input::placeholder { color:rgba(255,255,255,0.4); }
 @keyframes pop { 0%{transform:scale(0.8);opacity:0} 100%{transform:scale(1);opacity:1} }
-@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(167,139,250,0.6)} 50%{box-shadow:0 0 0 12px rgba(167,139,250,0)} }
+@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(167,139,250,0.6)} 50%{box-shadow:0 0 0 10px rgba(167,139,250,0)} }
+@keyframes float { 0%,100%{transform:translateY(0) rotate(-5deg)} 50%{transform:translateY(-8px) rotate(5deg)} }
+@keyframes glow { 0%,100%{box-shadow:0 0 6px 2px rgba(255,215,0,0.7)} 50%{box-shadow:0 0 14px 5px rgba(255,215,0,1)} }
+@keyframes spin-slow { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+.corner-medallion {
+  position:fixed; width:100px; height:100px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-size:2.4rem;
+  background:radial-gradient(circle,rgba(180,20,20,0.85),rgba(120,0,0,0.9));
+  border:3px solid rgba(255,200,50,0.4);
+  box-shadow:0 0 20px rgba(0,0,0,0.5),inset 0 0 15px rgba(255,150,0,0.15);
+  z-index:0; pointer-events:none; animation:float 4s ease-in-out infinite;
+}
+.corner-medallion.tl{top:10px;left:10px;animation-delay:0s}
+.corner-medallion.tr{top:10px;right:10px;animation-delay:0.5s}
+.corner-medallion.bl{bottom:10px;left:10px;animation-delay:1s}
+.corner-medallion.br{bottom:10px;right:10px;animation-delay:1.5s}
+.corner-medallion.ml{top:50%;left:10px;transform:translateY(-50%);animation-delay:0.3s}
+.corner-medallion.mr{top:50%;right:10px;transform:translateY(-50%);animation-delay:0.8s}
+
+.gold-frame{position:fixed;inset:8px;border:2px solid rgba(255,200,50,0.25);border-radius:12px;pointer-events:none;z-index:0}
+.gold-frame::before{content:'';position:absolute;inset:4px;border:1px solid rgba(255,200,50,0.12);border-radius:8px}
+
+.content-wrap{position:relative;z-index:1;min-height:100vh;padding:12px;display:flex;flex-direction:column;align-items:center;font-family:'Segoe UI',sans-serif}
+
+/* Board cell styles */
+.cell {
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1px;
+  min-height: 36px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+  cursor: default;
+}
+.cell-num {
+  font-size: 0.42rem;
+  font-weight: 900;
+  line-height: 1;
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  z-index: 2;
+  text-shadow: 0 0 3px rgba(0,0,0,0.6);
+}
+.cell-emoji {
+  font-size: 1rem;
+  line-height: 1;
+  z-index: 2;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+}
+.cell-players {
+  display: flex;
+  gap: 1px;
+  flex-wrap: wrap;
+  justify-content: center;
+  z-index: 3;
+  position: absolute;
+  bottom: 1px;
+}
+.player-token {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid white;
+  box-shadow: 0 0 4px rgba(0,0,0,0.6);
+}
+.cell-landed {
+  animation: glow 0.8s ease-in-out infinite !important;
+  border: 2px solid #FFD700 !important;
+  z-index: 5;
+}
 </style>
 </head>
 <body>
+<div class="gold-frame"></div>
+<div class="corner-medallion tl">🐭</div>
+<div class="corner-medallion tr">🐔</div>
+<div class="corner-medallion bl">🐰</div>
+<div class="corner-medallion br">🐑</div>
+<div class="corner-medallion ml">🐯</div>
+<div class="corner-medallion mr">🐒</div>
+
 <div id="root"></div>
 <script type="text/babel">
+
+// Each cell has a theme: emoji, gradient, label
+const CELL_THEMES = {
+  // Animals of 12-year cycle
+  1:  { emoji:"🐭", grad:"linear-gradient(135deg,#c0392b,#e74c3c)", num:"#fff" },
+  2:  { emoji:"🐮", grad:"linear-gradient(135deg,#6c3483,#9b59b6)", num:"#fff" },
+  3:  { emoji:"🐯", grad:"linear-gradient(135deg,#d35400,#f39c12)", num:"#fff" },
+  4:  { emoji:"🐰", grad:"linear-gradient(135deg,#1a5276,#2980b9)", num:"#fff" },
+  5:  { emoji:"🐲", grad:"linear-gradient(135deg,#1e8449,#27ae60)", num:"#fff" },
+  6:  { emoji:"🐍", grad:"linear-gradient(135deg,#7b241c,#c0392b)", num:"#fff" },
+  7:  { emoji:"🐴", grad:"linear-gradient(135deg,#784212,#d4ac0d)", num:"#fff" },
+  8:  { emoji:"🐑", grad:"linear-gradient(135deg,#2e86c1,#85c1e9)", num:"#333" },
+  9:  { emoji:"🐵", grad:"linear-gradient(135deg,#7d6608,#f1c40f)", num:"#333" },
+  10: { emoji:"⭐", grad:"linear-gradient(135deg,#1d8348,#52be80)", num:"#fff", special:true },
+  11: { emoji:"🐓", grad:"linear-gradient(135deg,#922b21,#e74c3c)", num:"#fff" },
+  12: { emoji:"🐶", grad:"linear-gradient(135deg,#784212,#a04000)", num:"#fff" },
+  13: { emoji:"🐷", grad:"linear-gradient(135deg,#c0392b,#f1948a)", num:"#fff" },
+  14: { emoji:"🌙", grad:"linear-gradient(135deg,#1a237e,#3949ab)", num:"#fff" },
+  15: { emoji:"☀️", grad:"linear-gradient(135deg,#f57f17,#ffca28)", num:"#333" },
+  16: { emoji:"🌟", grad:"linear-gradient(135deg,#4a235a,#8e44ad)", num:"#fff" },
+  17: { emoji:"🏔️", grad:"linear-gradient(135deg,#1b4f72,#2e86c1)", num:"#fff" },
+  18: { emoji:"🌊", grad:"linear-gradient(135deg,#0e6655,#1abc9c)", num:"#fff" },
+  19: { emoji:"🔥", grad:"linear-gradient(135deg,#922b21,#e74c3c)", num:"#fff" },
+  20: { emoji:"🌟", grad:"linear-gradient(135deg,#1d6a27,#2ecc71)", num:"#fff", special:true },
+  21: { emoji:"🌲", grad:"linear-gradient(135deg,#145a32,#27ae60)", num:"#fff" },
+  22: { emoji:"🏹", grad:"linear-gradient(135deg,#6e2f1a,#ca6f1e)", num:"#fff" },
+  23: { emoji:"🐭", grad:"linear-gradient(135deg,#7b241c,#c0392b)", num:"#fff" },
+  24: { emoji:"🌙", grad:"linear-gradient(135deg,#1a237e,#5c6bc0)", num:"#fff" },
+  25: { emoji:"⚡", grad:"linear-gradient(135deg,#7d6608,#f4d03f)", num:"#333" },
+  26: { emoji:"🏕️", grad:"linear-gradient(135deg,#1b5e20,#43a047)", num:"#fff" },
+  27: { emoji:"❄️", grad:"linear-gradient(135deg,#0d47a1,#42a5f5)", num:"#fff" },
+  28: { emoji:"🌸", grad:"linear-gradient(135deg,#880e4f,#ec407a)", num:"#fff" },
+  29: { emoji:"🍁", grad:"linear-gradient(135deg,#bf360c,#ef6c00)", num:"#fff" },
+  30: { emoji:"🌾", grad:"linear-gradient(135deg,#827717,#f9a825)", num:"#333" },
+  31: { emoji:"🐫", grad:"linear-gradient(135deg,#4e342e,#8d6e63)", num:"#fff" },
+  32: { emoji:"🐢", grad:"linear-gradient(135deg,#880000,#c0392b)", num:"#fff", special:true },
+  33: { emoji:"🦅", grad:"linear-gradient(135deg,#1565c0,#1e88e5)", num:"#fff" },
+  34: { emoji:"🦁", grad:"linear-gradient(135deg,#e65100,#ff8f00)", num:"#fff" },
+  35: { emoji:"🥊", grad:"linear-gradient(135deg,#b71c1c,#e53935)", num:"#fff" },
+  36: { emoji:"🎯", grad:"linear-gradient(135deg,#4a148c,#7b1fa2)", num:"#fff" },
+  37: { emoji:"🌀", grad:"linear-gradient(135deg,#006064,#00acc1)", num:"#fff" },
+  38: { emoji:"🏺", grad:"linear-gradient(135deg,#3e2723,#6d4c41)", num:"#fff" },
+  39: { emoji:"🌵", grad:"linear-gradient(135deg,#1b5e20,#388e3c)", num:"#fff" },
+  40: { emoji:"🎪", grad:"linear-gradient(135deg,#880e4f,#ad1457)", num:"#fff" },
+  41: { emoji:"🦌", grad:"linear-gradient(135deg,#5d4037,#8d6e63)", num:"#fff" },
+  42: { emoji:"🏔️", grad:"linear-gradient(135deg,#263238,#546e7a)", num:"#fff" },
+  43: { emoji:"💧", grad:"linear-gradient(135deg,#01579b,#0288d1)", num:"#fff" },
+  44: { emoji:"🌿", grad:"linear-gradient(135deg,#1b5e20,#2e7d32)", num:"#fff" },
+  45: { emoji:"🦅", grad:"linear-gradient(135deg,#1d6a27,#2ecc71)", num:"#fff", special:true },
+  46: { emoji:"🎭", grad:"linear-gradient(135deg,#4a148c,#6a1b9a)", num:"#fff" },
+  47: { emoji:"🌙", grad:"linear-gradient(135deg,#1a237e,#283593)", num:"#fff" },
+  48: { emoji:"🎲", grad:"linear-gradient(135deg,#b71c1c,#c62828)", num:"#fff" },
+  49: { emoji:"🦊", grad:"linear-gradient(135deg,#e65100,#f57c00)", num:"#fff" },
+  50: { emoji:"🌟", grad:"linear-gradient(135deg,#827717,#f9a825)", num:"#333" },
+  51: { emoji:"🐉", grad:"linear-gradient(135deg,#1b5e20,#388e3c)", num:"#fff" },
+  52: { emoji:"🏹", grad:"linear-gradient(135deg,#3e2723,#795548)", num:"#fff" },
+  53: { emoji:"🦋", grad:"linear-gradient(135deg,#880e4f,#c2185b)", num:"#fff" },
+  54: { emoji:"🌊", grad:"linear-gradient(135deg,#006064,#0097a7)", num:"#fff" },
+  55: { emoji:"🌀", grad:"linear-gradient(135deg,#880000,#c0392b)", num:"#fff", special:true },
+  56: { emoji:"🔥", grad:"linear-gradient(135deg,#bf360c,#e64a19)", num:"#fff" },
+  57: { emoji:"🏕️", grad:"linear-gradient(135deg,#33691e,#558b2f)", num:"#fff" },
+  58: { emoji:"⭐", grad:"linear-gradient(135deg,#f57f17,#f9a825)", num:"#333" },
+  59: { emoji:"🐺", grad:"linear-gradient(135deg,#37474f,#546e7a)", num:"#fff" },
+  60: { emoji:"🎯", grad:"linear-gradient(135deg,#880e4f,#ad1457)", num:"#fff" },
+  61: { emoji:"🦉", grad:"linear-gradient(135deg,#4e342e,#6d4c41)", num:"#fff" },
+  62: { emoji:"🎯", grad:"linear-gradient(135deg,#1d6a27,#27ae60)", num:"#fff", special:true },
+  63: { emoji:"🌙", grad:"linear-gradient(135deg,#1a237e,#3949ab)", num:"#fff" },
+  64: { emoji:"🐎", grad:"linear-gradient(135deg,#784212,#a04000)", num:"#fff" },
+  65: { emoji:"⚔️", grad:"linear-gradient(135deg,#37474f,#455a64)", num:"#fff" },
+  66: { emoji:"🏡", grad:"linear-gradient(135deg,#e65100,#ef6c00)", num:"#fff" },
+  67: { emoji:"🌸", grad:"linear-gradient(135deg,#880e4f,#e91e8c)", num:"#fff" },
+  68: { emoji:"🌙", grad:"linear-gradient(135deg,#0d47a1,#1565c0)", num:"#fff" },
+  69: { emoji:"🏔️", grad:"linear-gradient(135deg,#1b5e20,#2e7d32)", num:"#fff" },
+  70: { emoji:"🏆", grad:"linear-gradient(135deg,#b7950b,#f4d03f)", num:"#333" },
+};
 
 const ALL_QUESTIONS = [
   { q:"Монгол цаг тоолол ямар үндсэн тоололд тулгуурладаг вэ?", correct:"Нар-сар хосолсон тоолол", options:["Нарны тоолол","Сарны тоолол","Нар-сар хосолсон тоолол","Одны тоолол"] },
@@ -61,7 +224,7 @@ const ALL_QUESTIONS = [
   { q:"Гахай цаг аль үед тохиодог вэ?", correct:"21:00–23:00", options:["21:00–23:00","23:00–01:00","01:00–03:00","03:00–05:00"] },
   { q:"Монгол уламжлалт шинэ жилийг юу гэж нэрлэдэг вэ?", correct:"Цагаан сар", options:["Наадам","Цагаан сар","Тулгар төр","Алтан намар"] },
   { q:"Цагаан сар ямар тооллоор тодорхойлогддог вэ?", correct:"Билгийн тоолол", options:["Аргын тоолол","Билгийн тоолол","Нарны тоолол","Одны тоолол"] },
-  { q:"Битүүн өдөр гэж юу вэ?", correct:"Сарын сүүлийн өдөр", options:["Шинэ сарын эхний өдөр","Сарын сүүлийн өдөр","Жилийн эхний өдөр","Улирлын эхний өдөр"] },
+  { q:"Битүүн өдөр гэж юу вэ?", correct:"Сарны сүүлийн өдөр", options:["Шинэ сарын эхний өдөр","Сарны сүүлийн өдөр","Жилийн эхний өдөр","Улирлын эхний өдөр"] },
   { q:"Шинийн нэгэн ямар өдөр вэ?", correct:"Шинэ жилийн эхний өдөр", options:["Жилийн сүүлийн өдөр","Шинэ жилийн эхний өдөр","Намрын эхний өдөр","Зуны эхний өдөр"] },
   { q:"Монгол цаг тоололд хаврын улирал хэдэн сараас бүрддэг вэ?", correct:"3", options:["2","3","4","5"] },
   { q:"Монгол цаг тоололд зуны улирал хэдэн сараас бүрддэг вэ?", correct:"3", options:["2","3","4","5"] },
@@ -94,279 +257,272 @@ const ALL_QUESTIONS = [
   { q:"Монгол цаг тооллын судалгаа аль шинжлэх ухаантай нягт холбоотой вэ?", correct:"Дээрх бүгд", options:["Одон орон","Математик","Соёл судлал","Дээрх бүгд"] },
 ];
 
-// Assign questions to squares 1-70, cycling through all questions
 const SQUARE_QUESTIONS = {};
-for (let i = 1; i <= 70; i++) {
-  SQUARE_QUESTIONS[i] = ALL_QUESTIONS[(i - 1) % ALL_QUESTIONS.length];
-}
+for (let i=1;i<=70;i++) SQUARE_QUESTIONS[i]=ALL_QUESTIONS[(i-1)%ALL_QUESTIONS.length];
 
 const SPECIAL_SQUARES = {
-  10: { type:"forward",  amount:3, icon:"⭐", label:"Азтай! 3 нүүдэл урагш!" },
-  20: { type:"forward",  amount:2, icon:"🌟", label:"Сайн! 2 нүүдэл урагш!" },
-  32: { type:"backward", amount:4, icon:"🐢", label:"4 нүүдэл ухарна!" },
-  45: { type:"forward",  amount:3, icon:"🦅", label:"Хурдан! 3 нүүдэл урагш!" },
-  55: { type:"backward", amount:5, icon:"🌀", label:"5 нүүдэл ухарна!" },
-  62: { type:"forward",  amount:4, icon:"🎯", label:"Онов! 4 нүүдэл урагш!" },
+  10:{type:"forward", amount:3,icon:"⭐",label:"Азтай! 3 нүүдэл урагш!"},
+  20:{type:"forward", amount:2,icon:"🌟",label:"Сайн! 2 нүүдэл урагш!"},
+  32:{type:"backward",amount:4,icon:"🐢",label:"4 нүүдэл ухарна!"},
+  45:{type:"forward", amount:3,icon:"🦅",label:"Хурдан! 3 нүүдэл урагш!"},
+  55:{type:"backward",amount:5,icon:"🌀",label:"5 нүүдэл ухарна!"},
+  62:{type:"forward", amount:4,icon:"🎯",label:"Онов! 4 нүүдэл урагш!"},
 };
 
-const COLORS = [{ bg:"#E74C3C" },{ bg:"#3498DB" },{ bg:"#2ECC71" },{ bg:"#F39C12" }];
+const COLORS=[{bg:"#E74C3C"},{bg:"#3498DB"},{bg:"#2ECC71"},{bg:"#F39C12"}];
 
-function getCellBg(n) {
-  if (SPECIAL_SQUARES[n]) return SPECIAL_SQUARES[n].type === "forward" ? "#27AE60" : "#C0392B";
-  if (n % 5 === 0) return "#F0C040";
-  if (n % 3 === 0) return "#7EC8C8";
-  if (n % 2 === 0) return "#A8C8F0";
-  return "#F4A8B8";
-}
-
-function generateBoard() {
-  const rows = 8, cols = 10;
-  let num = 1, pos = [];
-  for (let r = rows - 1; r >= 0; r--) {
-    if ((rows - 1 - r) % 2 === 0) {
-      for (let c = 0; c < cols; c++) { if (num <= 70) pos.push({ r, c, n: num++ }); }
-    } else {
-      for (let c = cols - 1; c >= 0; c--) { if (num <= 70) pos.push({ r, c, n: num++ }); }
-    }
+function generateBoard(){
+  const rows=8,cols=10;let num=1,pos=[];
+  for(let r=rows-1;r>=0;r--){
+    if((rows-1-r)%2===0){for(let c=0;c<cols;c++){if(num<=70)pos.push({r,c,n:num++});}}
+    else{for(let c=cols-1;c>=0;c--){if(num<=70)pos.push({r,c,n:num++});}}
   }
   return pos;
 }
+const boardCells=generateBoard();
+const {useState}=React;
+function shuffle(arr){return[...arr].sort(()=>Math.random()-0.5);}
 
-const boardCells = generateBoard();
-const { useState } = React;
-function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+function BoardCell({n, playersHere, isLanded}){
+  const theme = CELL_THEMES[n] || {emoji:"🌟", grad:"linear-gradient(135deg,#444,#666)", num:"#fff"};
+  const sp = SPECIAL_SQUARES[n];
+  return (
+    <div className={`cell${isLanded?" cell-landed":""}`}
+      style={{
+        gridRow: boardCells.find(b=>b.n===n)?.r+1,
+        gridColumn: boardCells.find(b=>b.n===n)?.c+1,
+        background: theme.grad,
+        border: isLanded?"2px solid #FFD700": sp?"2px solid rgba(255,255,255,0.5)":"1px solid rgba(0,0,0,0.2)",
+        boxShadow: isLanded?"0 0 12px #FFD700": playersHere.length>0?"0 0 8px rgba(255,215,0,0.8)":"0 2px 4px rgba(0,0,0,0.3)",
+      }}>
+      <span className="cell-num" style={{color:theme.num}}>{n}</span>
+      <span className="cell-emoji">{theme.emoji}</span>
+      <div className="cell-players">
+        {playersHere.map((p,pi)=>(
+          <div key={pi} className="player-token"
+            style={{background:p.color.bg, animation:isLanded?"bounce 0.7s ease infinite":""}}/>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-function App() {
-  const [players, setPlayers]         = useState([{ name:"Тоглогч 1", pos:0, color:COLORS[0] },{ name:"Тоглогч 2", pos:0, color:COLORS[1] }]);
-  const [playerCount, setPlayerCount] = useState(2);
-  const [currentPlayer, setCP]        = useState(0);
-  const [diceValue, setDice]          = useState(null);
-  const [rolling, setRolling]         = useState(false);
-  const [phase, setPhase]             = useState("setup");
-  const [question, setQuestion]       = useState(null);
-  const [selected, setSelected]       = useState(null);
-  const [result, setResult]           = useState(null);
-  const [playerNames, setNames]       = useState(["Тоглогч 1","Тоглогч 2","Тоглогч 3","Тоглогч 4"]);
-  const [winner, setWinner]           = useState(null);
-  const [special, setSpecial]         = useState(null);
-  const [landed, setLanded]           = useState(null);
+function App(){
+  const [players,setPlayers]=useState([{name:"Тоглогч 1",pos:0,color:COLORS[0]},{name:"Тоглогч 2",pos:0,color:COLORS[1]}]);
+  const [playerCount,setPC]=useState(2);
+  const [currentPlayer,setCP]=useState(0);
+  const [diceValue,setDice]=useState(null);
+  const [rolling,setRolling]=useState(false);
+  const [phase,setPhase]=useState("setup");
+  const [question,setQuestion]=useState(null);
+  const [selected,setSelected]=useState(null);
+  const [result,setResult]=useState(null);
+  const [names,setNames]=useState(["Тоглогч 1","Тоглогч 2","Тоглогч 3","Тоглогч 4"]);
+  const [winner,setWinner]=useState(null);
+  const [special,setSpecial]=useState(null);
+  const [landed,setLanded]=useState(null);
 
-  const diceEmoji = ["","⚀","⚁","⚂","⚃","⚄","⚅"];
+  const diceEmoji=["","⚀","⚁","⚂","⚃","⚄","⚅"];
 
-  const nextTurn = () => {
-    setPhase("playing"); setQuestion(null); setResult(null);
-    setSelected(null); setLanded(null);
-    setCP(p => (p + 1) % playerCount);
+  const nextTurn=()=>{setPhase("playing");setQuestion(null);setResult(null);setSelected(null);setLanded(null);setCP(p=>(p+1)%playerCount);};
+
+  const showQuestion=(sq)=>{
+    const raw=SQUARE_QUESTIONS[sq]||ALL_QUESTIONS[0];
+    setQuestion({...raw,shuffledOptions:shuffle(raw.options)});
+    setSelected(null);setResult(null);setPhase("question");
   };
 
-  const showQuestion = (sq) => {
-    const raw = SQUARE_QUESTIONS[sq] || ALL_QUESTIONS[0];
-    setQuestion({ ...raw, shuffledOptions: shuffle(raw.options) });
-    setSelected(null); setResult(null); setPhase("question");
-  };
-
-  const rollDice = () => {
-    if (rolling || phase !== "playing") return;
-    setRolling(true);
-    let count = 0;
-    const iv = setInterval(() => {
-      setDice(Math.ceil(Math.random() * 6));
-      if (++count >= 10) {
+  const rollDice=()=>{
+    if(rolling||phase!=="playing")return;
+    setRolling(true);let count=0;
+    const iv=setInterval(()=>{
+      setDice(Math.ceil(Math.random()*6));
+      if(++count>=10){
         clearInterval(iv);
-        const final = Math.ceil(Math.random() * 6);
-        setDice(final); setRolling(false);
-        setPlayers(prev => {
-          const upd = [...prev];
-          const p = { ...upd[currentPlayer] };
-          p.pos = Math.min(p.pos + final, 70);
-          upd[currentPlayer] = p;
-          if (p.pos >= 70) { setWinner(currentPlayer); setPhase("winner"); return upd; }
+        const final=Math.ceil(Math.random()*6);
+        setDice(final);setRolling(false);
+        setPlayers(prev=>{
+          const upd=[...prev];const p={...upd[currentPlayer]};
+          p.pos=Math.min(p.pos+final,70);upd[currentPlayer]=p;
+          if(p.pos>=70){setWinner(currentPlayer);setPhase("winner");return upd;}
           setLanded(p.pos);
-          if (SPECIAL_SQUARES[p.pos]) { setSpecial({ ...SPECIAL_SQUARES[p.pos] }); setPhase("special"); }
+          if(SPECIAL_SQUARES[p.pos]){setSpecial({...SPECIAL_SQUARES[p.pos]});setPhase("special");}
           else setPhase("moved");
           return upd;
         });
       }
-    }, 80);
+    },80);
   };
 
-  const handleSpecial = () => {
-    const sp = special;
-    let np;
-    setPlayers(prev => {
-      const upd = [...prev];
-      const p = { ...upd[currentPlayer] };
-      p.pos = sp.type === "forward" ? Math.min(p.pos + sp.amount, 70) : Math.max(p.pos - sp.amount, 1);
-      np = p.pos; upd[currentPlayer] = p;
-      if (p.pos >= 70) { setWinner(currentPlayer); setPhase("winner"); return upd; }
+  const handleSpecial=()=>{
+    const sp=special;let np;
+    setPlayers(prev=>{
+      const upd=[...prev];const p={...upd[currentPlayer]};
+      p.pos=sp.type==="forward"?Math.min(p.pos+sp.amount,70):Math.max(p.pos-sp.amount,1);
+      np=p.pos;upd[currentPlayer]=p;
+      if(p.pos>=70){setWinner(currentPlayer);setPhase("winner");return upd;}
       return upd;
     });
     setSpecial(null);
-    setTimeout(() => { setLanded(np); setPhase("moved"); }, 100);
+    setTimeout(()=>{setLanded(np);setPhase("moved");},100);
   };
 
-  const pick = (opt) => {
-    if (result) return;
+  const pick=(opt)=>{
+    if(result)return;
     setSelected(opt);
-    const ok = opt === question.correct;
-    setResult(ok ? "correct" : "wrong");
-    if (ok) { setTimeout(nextTurn, 2000); }
-    else {
-      setPlayers(prev => {
-        const upd = [...prev]; const p = { ...upd[currentPlayer] };
-        p.pos = Math.max(p.pos - 1, 1); upd[currentPlayer] = p; return upd;
-      });
-      setTimeout(nextTurn, 2500);
+    const ok=opt===question.correct;
+    setResult(ok?"correct":"wrong");
+    if(ok){setTimeout(nextTurn,2000);}
+    else{
+      setPlayers(prev=>{const upd=[...prev];const p={...upd[currentPlayer]};p.pos=Math.max(p.pos-1,1);upd[currentPlayer]=p;return upd;});
+      setTimeout(nextTurn,2500);
     }
   };
 
-  const startGame = () => {
-    const ps = Array.from({ length: playerCount }, (_, i) => ({ name: playerNames[i] || `Тоглогч ${i+1}`, pos: 0, color: COLORS[i] }));
-    setPlayers(ps); setCP(0); setPhase("playing");
-    setWinner(null); setDice(null); setLanded(null);
+  const startGame=()=>{
+    const ps=Array.from({length:playerCount},(_,i)=>({name:names[i]||`Тоглогч ${i+1}`,pos:0,color:COLORS[i]}));
+    setPlayers(ps);setCP(0);setPhase("playing");setWinner(null);setDice(null);setLanded(null);
   };
 
-  const optStyle = (opt) => {
-    const base = { padding:"10px 14px", borderRadius:"10px", cursor: result ? "default" : "pointer", fontWeight:600, fontSize:"0.9rem", marginBottom:"8px", width:"100%", border:"2px solid", textAlign:"left", transition:"all 0.2s" };
-    if (!result) return { ...base, background:"rgba(255,255,255,0.1)", borderColor:"rgba(255,255,255,0.25)", color:"#fff" };
-    if (opt === question.correct) return { ...base, background:"rgba(46,204,113,0.25)", borderColor:"#2ECC71", color:"#2ECC71" };
-    if (opt === selected) return { ...base, background:"rgba(231,76,60,0.25)", borderColor:"#E74C3C", color:"#FF6B6B" };
-    return { ...base, background:"rgba(255,255,255,0.04)", borderColor:"rgba(255,255,255,0.08)", color:"#555" };
+  const optStyle=(opt)=>{
+    const base={padding:"10px 14px",borderRadius:"10px",cursor:result?"default":"pointer",fontWeight:600,fontSize:"0.88rem",marginBottom:"7px",width:"100%",border:"2px solid",textAlign:"left",transition:"all 0.2s"};
+    if(!result)return{...base,background:"rgba(0,0,0,0.35)",borderColor:"rgba(255,200,50,0.3)",color:"#fff"};
+    if(opt===question.correct)return{...base,background:"rgba(46,204,113,0.25)",borderColor:"#2ECC71",color:"#2ECC71"};
+    if(opt===selected)return{...base,background:"rgba(231,76,60,0.25)",borderColor:"#E74C3C",color:"#FF6B6B"};
+    return{...base,background:"rgba(0,0,0,0.2)",borderColor:"rgba(255,255,255,0.08)",color:"#666"};
   };
 
-  const inGame = ["playing","moved","special","question"].includes(phase);
+  const card={background:"rgba(100,0,0,0.72)",backdropFilter:"blur(8px)",border:"1px solid rgba(255,200,50,0.35)",borderRadius:"14px"};
+  const inGame=["playing","moved","special","question"].includes(phase);
 
-  // Compact board cell size
-  const CELL = { minHeight:"32px", fontSize:"0.5rem" };
-
-  return (
-    <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#1a0533,#2d1b69,#1a3a5c)", fontFamily:"'Segoe UI',sans-serif", padding:"12px", display:"flex", flexDirection:"column", alignItems:"center" }}>
-
-      <div style={{ fontSize:"1.3rem", fontWeight:900, color:"#FFD700", textShadow:"0 0 16px #FFD70099", marginBottom:"2px", textAlign:"center", letterSpacing:"1px" }}>🎲 ТА БИТГИЙ УУРЛААРАЙ 🎲</div>
-      <div style={{ color:"#A78BFA", fontSize:"0.75rem", marginBottom:"12px", textAlign:"center" }}>Монгол цаг тооллын асуултуудтай хөлөгт тоглоом</div>
+  return(
+    <div className="content-wrap">
+      {/* Header */}
+      <div style={{textAlign:"center",marginBottom:"10px"}}>
+        <div style={{fontSize:"1.4rem",fontWeight:900,color:"#FFD700",textShadow:"0 2px 12px rgba(0,0,0,0.8),0 0 30px rgba(255,180,0,0.5)",letterSpacing:"2px",marginBottom:"2px"}}>
+          🎲 ТА БИТГИЙ УУРЛААРАЙ 🎲
+        </div>
+        <div style={{color:"#FFCC70",fontSize:"0.75rem",textShadow:"0 1px 4px rgba(0,0,0,0.8)"}}>
+          АРВАН ХОЁР ЖИЛИЙН ЗУРЛАГА · Монгол цаг тооллын тоглоом
+        </div>
+      </div>
 
       {/* SETUP */}
-      {phase === "setup" && (
-        <div style={{ background:"rgba(255,255,255,0.08)", borderRadius:"18px", padding:"22px", maxWidth:"380px", width:"100%", border:"1px solid rgba(255,215,0,0.3)", animation:"pop 0.3s ease" }}>
-          <div style={{ color:"#FFD700", fontWeight:700, marginBottom:"14px", textAlign:"center" }}>👥 Тоглогчдын тоо</div>
-          <div style={{ display:"flex", gap:"10px", justifyContent:"center", marginBottom:"18px" }}>
-            {[2,3,4].map(n => (
-              <button key={n} onClick={() => setPlayerCount(n)} style={{ padding:"10px 22px", borderRadius:"10px", border:`2px solid ${playerCount===n?"#FFD700":"transparent"}`, background:playerCount===n?"#FFD700":"rgba(255,255,255,0.1)", color:playerCount===n?"#1a0533":"#fff", fontWeight:700, cursor:"pointer" }}>{n}</button>
+      {phase==="setup"&&(
+        <div style={{...card,padding:"22px",maxWidth:"380px",width:"100%",animation:"pop 0.3s ease"}}>
+          <div style={{color:"#FFD700",fontWeight:700,marginBottom:"14px",textAlign:"center",fontSize:"1rem"}}>👥 Тоглогчдын тоо</div>
+          <div style={{display:"flex",gap:"10px",justifyContent:"center",marginBottom:"16px"}}>
+            {[2,3,4].map(n=>(
+              <button key={n} onClick={()=>setPC(n)} style={{padding:"9px 20px",borderRadius:"9px",border:`2px solid ${playerCount===n?"#FFD700":"rgba(255,200,50,0.3)"}`,background:playerCount===n?"#FFD700":"rgba(0,0,0,0.3)",color:playerCount===n?"#8B0000":"#fff",fontWeight:700,cursor:"pointer"}}>{n}</button>
             ))}
           </div>
-          {Array.from({ length: playerCount }, (_, i) => (
-            <div key={i} style={{ marginBottom:"9px", display:"flex", alignItems:"center", gap:"10px" }}>
-              <div style={{ width:16, height:16, borderRadius:"50%", background:COLORS[i].bg, flexShrink:0, boxShadow:`0 0 6px ${COLORS[i].bg}` }}/>
-              <input value={playerNames[i]} onChange={e => { const n=[...playerNames]; n[i]=e.target.value; setNames(n); }} placeholder={`Тоглогч ${i+1}`} style={{ flex:1, padding:"9px 12px", borderRadius:"9px", border:"1px solid rgba(255,255,255,0.2)", background:"rgba(255,255,255,0.1)", fontSize:"0.95rem", outline:"none" }}/>
+          {Array.from({length:playerCount},(_,i)=>(
+            <div key={i} style={{marginBottom:"8px",display:"flex",alignItems:"center",gap:"10px"}}>
+              <div style={{width:15,height:15,borderRadius:"50%",background:COLORS[i].bg,flexShrink:0,boxShadow:`0 0 8px ${COLORS[i].bg}`}}/>
+              <input value={names[i]} onChange={e=>{const n=[...names];n[i]=e.target.value;setNames(n);}} placeholder={`Тоглогч ${i+1}`} style={{flex:1,padding:"9px 12px",borderRadius:"9px",border:"1px solid rgba(255,200,50,0.3)",background:"rgba(0,0,0,0.3)",fontSize:"0.9rem",outline:"none"}}/>
             </div>
           ))}
-          <button onClick={startGame} style={{ width:"100%", padding:"13px", borderRadius:"12px", background:"linear-gradient(135deg,#FFD700,#FF8C00)", border:"none", color:"#1a0533", fontSize:"1rem", fontWeight:900, cursor:"pointer", marginTop:"12px", boxShadow:"0 4px 18px rgba(255,215,0,0.35)" }}>🎮 ТОГЛООМ ЭХЛЭХ</button>
+          <button onClick={startGame} style={{width:"100%",padding:"13px",borderRadius:"11px",background:"linear-gradient(135deg,#FFD700,#FF8C00)",border:"none",color:"#8B0000",fontSize:"1rem",fontWeight:900,cursor:"pointer",marginTop:"12px",boxShadow:"0 4px 16px rgba(0,0,0,0.4)"}}>🎮 ТОГЛООМ ЭХЛЭХ</button>
         </div>
       )}
 
       {/* GAME */}
-      {inGame && (
-        <div style={{ width:"100%", maxWidth:"680px" }}>
-
-          {/* Players */}
-          <div style={{ display:"flex", gap:"6px", marginBottom:"8px", flexWrap:"wrap", justifyContent:"center" }}>
-            {players.slice(0, playerCount).map((p, i) => (
-              <div key={i} style={{ padding:"6px 12px", borderRadius:"10px", background:i===currentPlayer?p.color.bg:"rgba(255,255,255,0.07)", border:`2px solid ${i===currentPlayer?"#FFD700":"transparent"}`, color:"#fff", fontWeight:i===currentPlayer?700:400, display:"flex", alignItems:"center", gap:"6px", fontSize:"0.85rem", transition:"all 0.3s" }}>
+      {inGame&&(
+        <div style={{width:"100%",maxWidth:"700px"}}>
+          {/* Players bar */}
+          <div style={{display:"flex",gap:"6px",marginBottom:"8px",flexWrap:"wrap",justifyContent:"center"}}>
+            {players.slice(0,playerCount).map((p,i)=>(
+              <div key={i} style={{padding:"5px 11px",borderRadius:"9px",background:i===currentPlayer?p.color.bg:"rgba(0,0,0,0.5)",border:`2px solid ${i===currentPlayer?"#FFD700":"rgba(255,200,50,0.25)"}`,color:"#fff",fontWeight:i===currentPlayer?700:400,display:"flex",alignItems:"center",gap:"6px",fontSize:"0.82rem",transition:"all 0.3s"}}>
                 <span>●</span><span>{p.name}</span>
-                <span style={{ background:"rgba(0,0,0,0.3)", borderRadius:"5px", padding:"1px 6px", fontSize:"0.72rem" }}>{p.pos}/70</span>
+                <span style={{background:"rgba(0,0,0,0.4)",borderRadius:"4px",padding:"1px 5px",fontSize:"0.7rem"}}>{p.pos}/70</span>
               </div>
             ))}
           </div>
 
-          {/* BOARD — narrow cells */}
-          <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:"14px", padding:"8px", border:"1px solid rgba(255,215,0,0.15)", marginBottom:"10px", overflowX:"auto" }}>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(10,1fr)", gap:"2px", minWidth:"320px" }}>
-              {boardCells.map(({ r, c, n }) => {
-                const here = players.slice(0, playerCount).filter(p => p.pos === n);
-                const sp   = SPECIAL_SQUARES[n];
-                const isL  = n === landed;
-                return (
-                  <div key={n} style={{ gridRow:r+1, gridColumn:c+1, background:getCellBg(n), borderRadius:"5px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"1px", ...CELL, border:isL?"2px solid #FFD700":"1px solid rgba(0,0,0,0.08)", boxShadow:isL?"0 0 10px #FFD700":here.length>0?"0 0 6px rgba(255,215,0,0.6)":"none", transition:"all 0.3s" }}>
-                    <span style={{ fontSize:"0.45rem", color:"#333", fontWeight:700, lineHeight:1 }}>{n}</span>
-                    {sp && <span style={{ fontSize:"0.65rem", lineHeight:1 }}>{sp.icon}</span>}
-                    <div style={{ display:"flex", gap:"1px", flexWrap:"wrap", justifyContent:"center" }}>
-                      {here.map((p, pi) => (
-                        <div key={pi} style={{ width:8, height:8, borderRadius:"50%", background:p.color.bg, border:"1px solid white", animation:isL?"bounce 0.7s ease infinite":"" }}/>
-                      ))}
-                    </div>
-                  </div>
-                );
+          {/* BOARD */}
+          <div style={{...card,padding:"8px",marginBottom:"10px",overflowX:"auto"}}>
+            {/* Legend */}
+            <div style={{display:"flex",gap:"8px",marginBottom:"6px",flexWrap:"wrap",justifyContent:"center",fontSize:"0.65rem",color:"#FFCC70"}}>
+              <span>⭐🌟🦅🎯 = урагш нүүнэ</span>
+              <span>🐢🌀 = ухарна</span>
+              <span>🏆 = финиш!</span>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(10,1fr)",gap:"3px",minWidth:"300px"}}>
+              {boardCells.map(({r,c,n})=>{
+                const here=players.slice(0,playerCount).filter(p=>p.pos===n);
+                const isL=n===landed;
+                return <BoardCell key={n} n={n} playersHere={here} isLanded={isL}/>;
               })}
             </div>
           </div>
 
           {/* ROLL */}
-          {phase === "playing" && (
-            <div style={{ background:"rgba(255,255,255,0.08)", borderRadius:"14px", padding:"18px", textAlign:"center", border:"1px solid rgba(255,215,0,0.2)" }}>
-              <div style={{ color:"#FFD700", fontWeight:700, marginBottom:"8px" }}>{players[currentPlayer]?.name}-ийн ээлж</div>
-              <div style={{ fontSize:"3rem", marginBottom:"10px" }}>{diceValue ? diceEmoji[diceValue] : "🎲"}</div>
-              <button onClick={rollDice} disabled={rolling} style={{ padding:"12px 36px", borderRadius:"12px", background:rolling?"rgba(255,255,255,0.1)":"linear-gradient(135deg,#FFD700,#FF8C00)", border:"none", color:rolling?"#888":"#1a0533", fontSize:"1rem", fontWeight:900, cursor:rolling?"not-allowed":"pointer" }}>
-                {rolling ? "⏳ Хаяж байна..." : "🎲 ШОО ХАЯХ"}
+          {phase==="playing"&&(
+            <div style={{...card,padding:"18px",textAlign:"center"}}>
+              <div style={{color:"#FFD700",fontWeight:700,marginBottom:"8px"}}>{players[currentPlayer]?.name}-ийн ээлж</div>
+              <div style={{fontSize:"3rem",marginBottom:"10px"}}>{diceValue?diceEmoji[diceValue]:"🎲"}</div>
+              <button onClick={rollDice} disabled={rolling} style={{padding:"12px 34px",borderRadius:"11px",background:rolling?"rgba(0,0,0,0.3)":"linear-gradient(135deg,#FFD700,#FF8C00)",border:"none",color:rolling?"#888":"#8B0000",fontSize:"1rem",fontWeight:900,cursor:rolling?"not-allowed":"pointer",boxShadow:"0 3px 12px rgba(0,0,0,0.4)"}}>
+                {rolling?"⏳ Хаяж байна...":"🎲 ШОО ХАЯХ"}
               </button>
             </div>
           )}
 
           {/* MOVED */}
-          {phase === "moved" && (
-            <div style={{ background:"rgba(255,255,255,0.08)", borderRadius:"14px", padding:"20px", textAlign:"center", border:"2px solid rgba(255,215,0,0.35)", animation:"pop 0.3s ease" }}>
-              <div style={{ fontSize:"2.5rem", marginBottom:"4px" }}>{diceEmoji[diceValue]}</div>
-              <div style={{ color:"#FFD700", fontSize:"1.3rem", fontWeight:900, marginBottom:"4px" }}>Шоо: {diceValue}</div>
-              <div style={{ color:"#fff", fontSize:"0.95rem", marginBottom:"4px" }}>
-                <span style={{ color:players[currentPlayer]?.color.bg, fontWeight:700 }}>{players[currentPlayer]?.name}</span>
-                {" → "}
-                <span style={{ color:"#FFD700", fontWeight:700 }}>{landed}-р нүд</span>
+          {phase==="moved"&&(
+            <div style={{...card,padding:"20px",textAlign:"center",borderColor:"rgba(255,215,0,0.5)",animation:"pop 0.3s ease"}}>
+              <div style={{fontSize:"2.5rem",marginBottom:"4px"}}>{diceEmoji[diceValue]}</div>
+              <div style={{color:"#FFD700",fontSize:"1.3rem",fontWeight:900,marginBottom:"4px"}}>Шоо: {diceValue}</div>
+              <div style={{color:"#fff",fontSize:"0.9rem",marginBottom:"4px"}}>
+                <span style={{color:players[currentPlayer]?.color.bg,fontWeight:700}}>{players[currentPlayer]?.name}</span>{" → "}
+                <span style={{color:"#FFD700",fontWeight:700}}>{landed}-р нүд </span>
+                <span style={{fontSize:"1.2rem"}}>{CELL_THEMES[landed]?.emoji}</span>
               </div>
-              <div style={{ color:"#A78BFA", fontSize:"0.8rem", marginBottom:"16px" }}>Асуулт бэлэн байна!</div>
-              <button onClick={() => showQuestion(landed)} style={{ padding:"13px 34px", borderRadius:"12px", background:"linear-gradient(135deg,#A78BFA,#7C3AED)", border:"none", color:"#fff", fontSize:"1rem", fontWeight:900, cursor:"pointer", animation:"pulse 1.5s ease infinite" }}>
+              <div style={{color:"#FFCC70",fontSize:"0.78rem",marginBottom:"16px"}}>Асуулт бэлэн байна!</div>
+              <button onClick={()=>showQuestion(landed)} style={{padding:"12px 32px",borderRadius:"11px",background:"linear-gradient(135deg,#A78BFA,#7C3AED)",border:"none",color:"#fff",fontSize:"0.95rem",fontWeight:900,cursor:"pointer",animation:"pulse 1.5s ease infinite",boxShadow:"0 3px 12px rgba(0,0,0,0.4)"}}>
                 📋 Асуулт харах
               </button>
             </div>
           )}
 
           {/* SPECIAL */}
-          {phase === "special" && special && (
-            <div style={{ background:special.type==="forward"?"rgba(46,204,113,0.15)":"rgba(231,76,60,0.15)", borderRadius:"14px", padding:"20px", textAlign:"center", border:`2px solid ${special.type==="forward"?"#2ECC71":"#E74C3C"}`, animation:"pop 0.3s ease" }}>
-              <div style={{ fontSize:"2.5rem", marginBottom:"6px" }}>{special.icon}</div>
-              <div style={{ color:"#FFD700", fontSize:"1.1rem", fontWeight:700, marginBottom:"6px" }}>{special.label}</div>
-              <div style={{ color:"#aaa", fontSize:"0.8rem", marginBottom:"14px" }}>Дараа нь асуулт хариулна</div>
-              <button onClick={handleSpecial} style={{ padding:"11px 28px", borderRadius:"11px", background:"linear-gradient(135deg,#FFD700,#FF8C00)", border:"none", color:"#1a0533", fontWeight:700, cursor:"pointer" }}>Үргэлжлүүлэх →</button>
+          {phase==="special"&&special&&(
+            <div style={{...card,padding:"20px",textAlign:"center",borderColor:special.type==="forward"?"#2ECC71":"#E74C3C",animation:"pop 0.3s ease"}}>
+              <div style={{fontSize:"2.5rem",marginBottom:"6px"}}>{special.icon}</div>
+              <div style={{color:"#FFD700",fontSize:"1.1rem",fontWeight:700,marginBottom:"6px"}}>{special.label}</div>
+              <div style={{color:"#FFCC70",fontSize:"0.78rem",marginBottom:"14px"}}>Дараа нь асуулт хариулна</div>
+              <button onClick={handleSpecial} style={{padding:"10px 26px",borderRadius:"10px",background:"linear-gradient(135deg,#FFD700,#FF8C00)",border:"none",color:"#8B0000",fontWeight:700,cursor:"pointer"}}>Үргэлжлүүлэх →</button>
             </div>
           )}
 
           {/* QUESTION */}
-          {phase === "question" && question && (
-            <div style={{ background:"rgba(167,139,250,0.12)", borderRadius:"14px", padding:"18px", border:"1px solid rgba(167,139,250,0.4)", animation:"pop 0.3s ease" }}>
-              <div style={{ color:"#A78BFA", fontSize:"0.75rem", marginBottom:"8px", textAlign:"center" }}>
-                📅 {players[currentPlayer]?.name} — <span style={{ color:"#FFD700" }}>{landed}-р нүдний асуулт</span>
+          {phase==="question"&&question&&(
+            <div style={{...card,padding:"18px",animation:"pop 0.3s ease"}}>
+              <div style={{color:"#FFCC70",fontSize:"0.73rem",marginBottom:"8px",textAlign:"center"}}>
+                {CELL_THEMES[landed]?.emoji} {players[currentPlayer]?.name} — <span style={{color:"#FFD700"}}>{landed}-р нүдний асуулт</span>
               </div>
-              <div style={{ color:"#fff", fontSize:"1rem", fontWeight:600, marginBottom:"14px", textAlign:"center", lineHeight:1.55 }}>{question.q}</div>
-              {question.shuffledOptions.map((opt, i) => (
-                <button key={i} onClick={() => pick(opt)} style={optStyle(opt)}>
-                  <span style={{ marginRight:"8px", opacity:0.5, fontWeight:700 }}>{["A","B","C","D"][i]})</span>
+              <div style={{color:"#fff",fontSize:"0.98rem",fontWeight:600,marginBottom:"14px",textAlign:"center",lineHeight:1.55}}>{question.q}</div>
+              {question.shuffledOptions.map((opt,i)=>(
+                <button key={i} onClick={()=>pick(opt)} style={optStyle(opt)}>
+                  <span style={{marginRight:"8px",opacity:0.6,fontWeight:700}}>{["A","B","C","D"][i]})</span>
                   {opt}
-                  {result && opt === question.correct && " ✅"}
-                  {result && opt === selected && opt !== question.correct && " ❌"}
+                  {result&&opt===question.correct&&" ✅"}
+                  {result&&opt===selected&&opt!==question.correct&&" ❌"}
                 </button>
               ))}
-              {result === "correct" && <div style={{ textAlign:"center", marginTop:"8px", color:"#2ECC71", fontWeight:700, animation:"pop 0.3s ease" }}>🎉 Зөв хариулт!</div>}
-              {result === "wrong"   && <div style={{ textAlign:"center", marginTop:"8px", color:"#FF6B6B", fontWeight:700, animation:"pop 0.3s ease" }}>❌ Буруу! 1 нүүдэл ухарлаа. Зөв: <span style={{ color:"#FFD700" }}>{question.correct}</span></div>}
+              {result==="correct"&&<div style={{textAlign:"center",marginTop:"8px",color:"#2ECC71",fontWeight:700,animation:"pop 0.3s ease"}}>🎉 Зөв хариулт!</div>}
+              {result==="wrong"&&<div style={{textAlign:"center",marginTop:"8px",color:"#FF6B6B",fontWeight:700,animation:"pop 0.3s ease"}}>❌ Буруу! 1 нүүдэл ухарлаа. Зөв: <span style={{color:"#FFD700"}}>{question.correct}</span></div>}
             </div>
           )}
         </div>
       )}
 
       {/* WINNER */}
-      {phase === "winner" && winner !== null && (
-        <div style={{ textAlign:"center", padding:"36px", background:"rgba(255,215,0,0.1)", borderRadius:"22px", border:"2px solid #FFD700", maxWidth:"360px", width:"100%", animation:"pop 0.4s ease" }}>
-          <div style={{ fontSize:"4rem", marginBottom:"10px" }}>🏆</div>
-          <div style={{ color:"#FFD700", fontSize:"1.8rem", fontWeight:900, marginBottom:"6px" }}>{players[winner]?.name}</div>
-          <div style={{ color:"#fff", fontSize:"1rem", marginBottom:"20px" }}>ТОГЛООМЫГ ДУУСГАЛАА!</div>
-          <button onClick={() => setPhase("setup")} style={{ padding:"13px 36px", borderRadius:"12px", background:"linear-gradient(135deg,#FFD700,#FF8C00)", border:"none", color:"#1a0533", fontWeight:900, fontSize:"1rem", cursor:"pointer" }}>🔄 Дахин тоглох</button>
+      {phase==="winner"&&winner!==null&&(
+        <div style={{...card,textAlign:"center",padding:"36px",maxWidth:"360px",width:"100%",borderColor:"rgba(255,215,0,0.6)",animation:"pop 0.4s ease",boxShadow:"0 0 40px rgba(255,150,0,0.3)"}}>
+          <div style={{fontSize:"4rem",marginBottom:"10px"}}>🏆</div>
+          <div style={{color:"#FFD700",fontSize:"1.8rem",fontWeight:900,marginBottom:"6px"}}>{players[winner]?.name}</div>
+          <div style={{color:"#fff",fontSize:"1rem",marginBottom:"20px"}}>ТОГЛООМЫГ ДУУСГАЛАА!</div>
+          <button onClick={()=>setPhase("setup")} style={{padding:"13px 36px",borderRadius:"11px",background:"linear-gradient(135deg,#FFD700,#FF8C00)",border:"none",color:"#8B0000",fontWeight:900,fontSize:"1rem",cursor:"pointer"}}>🔄 Дахин тоглох</button>
         </div>
       )}
     </div>
